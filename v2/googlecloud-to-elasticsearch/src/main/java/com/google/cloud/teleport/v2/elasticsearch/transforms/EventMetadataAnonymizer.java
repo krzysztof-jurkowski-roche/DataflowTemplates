@@ -22,10 +22,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.cloud.teleport.v2.elasticsearch.options.PubSubToElasticsearchOptions;
-import com.google.cloud.teleport.v2.elasticsearch.utils.ElasticsearchUtils;
-
 import java.io.Serializable;
-import java.util.NoSuchElementException;
 
 /**
  * EventMetadataBuilder is used to insert metadata required by Elasticsearch. The metadata helps
@@ -37,69 +34,75 @@ import java.util.NoSuchElementException;
  * inputGCPAuditlogMessageEnriched.json</a></b> to see an example of enriched message.
  */
 public class EventMetadataAnonymizer implements Serializable {
-  @JsonIgnore private final String inputMessage;
-  @JsonIgnore private JsonNode enrichedMessage;
-  @JsonIgnore final ObjectMapper objectMapper = new ObjectMapper();
+    @JsonIgnore
+    private final String inputMessage;
+    @JsonIgnore
+    private JsonNode enrichedMessage;
+    @JsonIgnore
+    final ObjectMapper objectMapper = new ObjectMapper();
 
-  private EventMetadataAnonymizer(String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
-    this.inputMessage = inputMessage;
-  }
-
-  public static EventMetadataAnonymizer build(
-      String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
-    return new EventMetadataAnonymizer(inputMessage, pubSubToElasticsearchOptions);
-  }
-
-  private void anonymize() {
-    try {
-      enrichedMessage = objectMapper.readTree(inputMessage);
-      ((ObjectNode) enrichedMessage).put("custom", "greetings from anonymizer");
-    } catch (JsonProcessingException e) {
-      throw new IllegalStateException(
-          "Exception occurred while processing input message: " + inputMessage, e);
-    }
-  }
-
-  public String getAnonymizedMessageAsString() {
-    if (enrichedMessage == null) {
-      this.anonymize();
+    private EventMetadataAnonymizer(String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
+        this.inputMessage = inputMessage;
     }
 
-    try {
-      return objectMapper.writeValueAsString(enrichedMessage);
-    } catch (JsonProcessingException e) {
-      throw new IllegalStateException(
-          "Exception occurred while building enriched message: " + enrichedMessage, e);
-    }
-  }
-
-  public JsonNode getAnonymizedMessageAsJsonNode() {
-    if (enrichedMessage == null) {
-      this.anonymize();
+    public static EventMetadataAnonymizer build(
+            String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
+        return new EventMetadataAnonymizer(inputMessage, pubSubToElasticsearchOptions);
     }
 
-    return enrichedMessage;
-  }
-
-  @Override
-  public String toString() {
-    try {
-      return objectMapper.writeValueAsString(enrichedMessage);
-    } catch (JsonProcessingException e) {
-      throw new IllegalStateException(
-          "Exception occurred while writing EventMetadataBuilder as String.", e);
+    private void anonymize() {
+        try {
+            enrichedMessage = objectMapper.readTree(inputMessage);
+            ((ObjectNode) enrichedMessage).put("custom", "greetings from anonymizer");
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(
+                    "Exception occurred while processing input message: " + inputMessage, e);
+        }
     }
-  }
 
-  static class EventMetadata {
-    @JsonProperty("@timestamp")
-    private String timestamp;
+    public String getAnonymizedMessageAsString() {
+        if (enrichedMessage == null) {
+            this.anonymize();
+        }
 
-    @JsonProperty("message")
-    private String message;
+        try {
+            return objectMapper.writeValueAsString(enrichedMessage);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(
+                    "Exception occurred while building enriched message: " + enrichedMessage, e);
+        }
+    }
 
-    @JsonIgnore private String inputMessage;
-    @JsonIgnore private JsonNode enrichedMessage;
-    @JsonIgnore final ObjectMapper objectMapper = new ObjectMapper();
-  }
+    public JsonNode getAnonymizedMessageAsJsonNode() {
+        if (enrichedMessage == null) {
+            this.anonymize();
+        }
+
+        return enrichedMessage;
+    }
+
+    @Override
+    public String toString() {
+        try {
+            return objectMapper.writeValueAsString(enrichedMessage);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException(
+                    "Exception occurred while writing EventMetadataBuilder as String.", e);
+        }
+    }
+
+    static class EventMetadata {
+        @JsonProperty("@timestamp")
+        private String timestamp;
+
+        @JsonProperty("message")
+        private String message;
+
+        @JsonIgnore
+        private String inputMessage;
+        @JsonIgnore
+        private JsonNode enrichedMessage;
+        @JsonIgnore
+        final ObjectMapper objectMapper = new ObjectMapper();
+    }
 }
