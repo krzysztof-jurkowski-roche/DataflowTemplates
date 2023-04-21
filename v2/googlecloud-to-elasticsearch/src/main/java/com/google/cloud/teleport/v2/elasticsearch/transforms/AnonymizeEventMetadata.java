@@ -28,10 +28,10 @@ public class AnonymizeEventMetadata extends PTransform<PCollection<String>, PCol
 
     @Override
     public PCollection<String> expand(PCollection<String> input) {
-        return input.apply(ParDo.of(new EventMetadataFn()));
+        return input.apply(ParDo.of(new AnonymizeEventMetadataFn()));
     }
 
-    static class EventMetadataFn extends DoFn<String, String> {
+    static class AnonymizeEventMetadataFn extends DoFn<String, String> {
 
         @ProcessElement
         public void processElement(ProcessContext context) {
