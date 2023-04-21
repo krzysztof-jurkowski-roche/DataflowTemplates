@@ -1,4 +1,5 @@
 -include .env
+-include .env.local
 export
 
 all: build push
