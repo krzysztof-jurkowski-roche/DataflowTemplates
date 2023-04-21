@@ -104,6 +104,8 @@ public class EventMetadataBuilder implements Serializable {
     try {
       enrichedMessage = objectMapper.readTree(inputMessage);
       ((ObjectNode) enrichedMessage).putAll((ObjectNode) objectMapper.valueToTree(eventMetadata));
+      ((ObjectNode) enrichedMessage).remove("message");
+      // TODO: czemu zmieniają timestamp
       ((ObjectNode) enrichedMessage).remove("timestamp");
     } catch (JsonProcessingException e) {
       throw new IllegalStateException(
