@@ -21,8 +21,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.cloud.dlp.v2.DlpServiceClient;
 import com.google.cloud.teleport.v2.elasticsearch.options.PubSubToElasticsearchOptions;
+import com.google.privacy.dlp.v2.ContentItem;
+import com.google.privacy.dlp.v2.DeidentifyContentRequest.Builder;
+import com.google.privacy.dlp.v2.DeidentifyContentResponse;
 import java.io.Serializable;
+import org.jline.utils.Log;
 
 /**
  * EventMetadataBuilder is used to insert metadata required by Elasticsearch. The metadata helps
@@ -41,19 +46,35 @@ public class EventMetadataAnonymizer implements Serializable {
     @JsonIgnore
     final ObjectMapper objectMapper = new ObjectMapper();
 
-    private EventMetadataAnonymizer(String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
+    private final Builder requestBuilder;
+
+    private final DlpServiceClient dlpServiceClient;
+
+    private EventMetadataAnonymizer(String inputMessage, DlpServiceClient dlpServiceClient, Builder requestBuilder, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
         this.inputMessage = inputMessage;
+        this.dlpServiceClient = dlpServiceClient;
+        this.requestBuilder = requestBuilder;
     }
 
-    public static EventMetadataAnonymizer build(
-            String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
-        return new EventMetadataAnonymizer(inputMessage, pubSubToElasticsearchOptions);
+    public static EventMetadataAnonymizer build(String inputMessage, DlpServiceClient dlpServiceClient, Builder requestBuilder, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
+        return new EventMetadataAnonymizer(inputMessage, dlpServiceClient, requestBuilder, pubSubToElasticsearchOptions);
     }
 
     private void anonymize() {
         try {
             enrichedMessage = objectMapper.readTree(inputMessage);
-            ((ObjectNode) enrichedMessage).put("custom", "greetings from anonymizer");
+            JsonNode queryMessage = enrichedMessage.get("query_message");
+            if(queryMessage != null) {
+                // Set the text to be de-identified.
+                Log.info("Will anonymize: " + queryMessage.asText());
+                ContentItem contentItem = ContentItem.newBuilder().setValue(queryMessage.asText()).build();
+                this.requestBuilder.setItem(contentItem);
+                DeidentifyContentResponse response = dlpServiceClient.deidentifyContent(this.requestBuilder.build());
+                String tokenizedData = response.getItem().getValue();
+                Log.info("Anonymized: " + tokenizedData);
+                // ((ObjectNode) enrichedMessage).put("query_message", tokenizedData);
+                ((ObjectNode) enrichedMessage).put("custom", "anonymized: " + tokenizedData);
+            }
         } catch (JsonProcessingException e) {
             throw new IllegalStateException(
                     "Exception occurred while processing input message: " + inputMessage, e);
