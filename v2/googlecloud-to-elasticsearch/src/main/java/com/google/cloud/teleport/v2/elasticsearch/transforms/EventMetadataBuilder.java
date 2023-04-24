@@ -49,9 +49,6 @@ public class EventMetadataBuilder implements Serializable {
   @JsonProperty("ecs")
   private Ecs ecs;
 
-  @JsonProperty("message")
-  private String message;
-
   @JsonProperty("service")
   private Service service;
 
@@ -63,9 +60,13 @@ public class EventMetadataBuilder implements Serializable {
   @JsonIgnore final ObjectMapper objectMapper = new ObjectMapper();
   @JsonIgnore EventMetadata eventMetadata;
 
+  private final String index, id;
+
   private EventMetadataBuilder(
       String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
     eventMetadata = new EventMetadata();
+    index = pubSubToElasticsearchOptions.getPropertyAsIndex();
+    id = pubSubToElasticsearchOptions.getPropertyAsId();
 
     try {
       eventMetadata.timestamp =
@@ -81,7 +82,6 @@ public class EventMetadataBuilder implements Serializable {
     this.inputMessage = inputMessage;
 
     eventMetadata.ecs = new Ecs();
-    eventMetadata.message = inputMessage;
     eventMetadata.agent = new Agent();
     eventMetadata.agent.version = pubSubToElasticsearchOptions.getElasticsearchTemplateVersion();
 
@@ -104,7 +104,9 @@ public class EventMetadataBuilder implements Serializable {
     try {
       enrichedMessage = objectMapper.readTree(inputMessage);
       ((ObjectNode) enrichedMessage).putAll((ObjectNode) objectMapper.valueToTree(eventMetadata));
-      ((ObjectNode) enrichedMessage).remove("message");
+
+      ((ObjectNode) enrichedMessage).remove(index);
+      ((ObjectNode) enrichedMessage).remove(id);
       // TODO: czemu zmieniają timestamp
       ((ObjectNode) enrichedMessage).remove("timestamp");
     } catch (JsonProcessingException e) {

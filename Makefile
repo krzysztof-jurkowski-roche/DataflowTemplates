@@ -2,13 +2,16 @@
 -include .env.local
 export
 
-all: build push
+all: clean build push
+
+clean:
+	mvn clean
 
 build:
-	mvn clean package -pl v2/googlecloud-to-elasticsearch -am
+	mvn package -pl v2/googlecloud-to-elasticsearch -am
 
 push:
-	mvn clean package -PtemplatesStage  \
+	mvn package -PtemplatesStage  \
       -DskipTests \
       -DprojectId="$(PROJECT_ID)" \
       -DbucketName="$(BUCKET_NAME)" \
@@ -17,7 +20,7 @@ push:
       -pl v2/$(MODULE) -am
 
 run:
-	mvn clean package -PtemplatesRun \
+	mvn package -PtemplatesRun \
       -DskipTests \
       -DprojectId="$(PROJECT_ID)" \
       -DbucketName="$(BUCKET_NAME)" \
