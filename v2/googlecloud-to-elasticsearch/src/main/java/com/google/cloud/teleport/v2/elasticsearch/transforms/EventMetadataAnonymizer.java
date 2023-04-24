@@ -66,15 +66,17 @@ public class EventMetadataAnonymizer implements Serializable {
             ((ObjectNode) enrichedMessage).put("custom", "greetings from anonymizer debug");
             JsonNode queryMessage = enrichedMessage.get("query_message");
             try {
-                if(queryMessage != null) {
+                if(queryMessage != null && queryMessage.asText().length() > 0) {
                     // Set the text to be de-identified.
                     Log.info("Will anonymize: " + queryMessage.asText());
                     ContentItem contentItem = ContentItem.newBuilder().setValue(queryMessage.asText()).build();
                     this.requestBuilder.setItem(contentItem);
                     DeidentifyContentResponse response = dlpServiceClient.deidentifyContent(this.requestBuilder.build());
-                    String tokenizedData = response.getItem().getValue();
-                    Log.info("Anonymized: " + tokenizedData);
-                    // ((ObjectNode) enrichedMessage).put("query_message", tokenizedData);
+                    if(response.hasItem()) {
+                        final String tokenizedData = response.getItem().getValue();
+                        Log.info("Anonymized: " + tokenizedData);
+                        ((ObjectNode) enrichedMessage).put("query_message", tokenizedData);
+                    }
                     //((ObjectNode) enrichedMessage).put("custom", "anonymized: " + tokenizedData);
                 }
             } catch (Exception e) {
