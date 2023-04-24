@@ -18,6 +18,7 @@ package com.google.cloud.teleport.v2.elasticsearch.options;
 import com.google.cloud.teleport.metadata.TemplateParameter;
 import com.google.cloud.teleport.v2.elasticsearch.utils.Dataset;
 import com.google.cloud.teleport.v2.transforms.JavascriptTextTransformer;
+import org.apache.beam.runners.dataflow.options.DataflowPipelineOptions;
 import org.apache.beam.sdk.options.Default;
 import org.apache.beam.sdk.options.Validation;
 
@@ -30,7 +31,7 @@ import org.apache.beam.sdk.options.Validation;
  * ElasticsearchWriteOptions}.
  */
 public interface PubSubToElasticsearchOptions
-    extends JavascriptTextTransformer.JavascriptTextTransformerOptions, ElasticsearchWriteOptions {
+    extends JavascriptTextTransformer.JavascriptTextTransformerOptions, ElasticsearchWriteOptions, DataflowPipelineOptions {
 
   @TemplateParameter.PubsubSubscription(
       order = 1,

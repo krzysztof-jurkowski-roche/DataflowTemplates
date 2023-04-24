@@ -43,6 +43,9 @@ import org.apache.beam.sdk.values.TypeDescriptors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * The {@link PubSubToElasticsearch} pipeline is a streaming pipeline which ingests data in JSON
  * format from PubSub, applies a Javascript UDF if provided and writes the resulting records to
@@ -54,35 +57,35 @@ import org.slf4j.LoggerFactory;
  * for instructions on how to use or modify this template.
  */
 @Template(
-        name = "PubSub_to_Elasticsearch",
-        category = TemplateCategory.STREAMING,
-        displayName = "Pub/Sub to Elasticsearch",
-        description =
-                "A pipeline to read messages from Pub/Sub and writes into an Elasticsearch instance as json"
-                        + " documents with optional intermediate transformations using Javascript Udf.",
-        optionsClass = PubSubToElasticsearchOptions.class,
-        skipOptions = "index", // Template just ignores what is sent as "index"
-        flexContainerName = "pubsub-to-elasticsearch",
-        documentation =
-                "https://cloud.google.com/dataflow/docs/guides/templates/provided/pubsub-to-elasticsearch",
-        contactInformation = "https://cloud.google.com/support")
+    name = "PubSub_to_Elasticsearch",
+    category = TemplateCategory.STREAMING,
+    displayName = "Pub/Sub to Elasticsearch",
+    description =
+        "A pipeline to read messages from Pub/Sub and writes into an Elasticsearch instance as json"
+            + " documents with optional intermediate transformations using Javascript Udf.",
+    optionsClass = PubSubToElasticsearchOptions.class,
+    skipOptions = "index", // Template just ignores what is sent as "index"
+    flexContainerName = "pubsub-to-elasticsearch",
+    documentation =
+        "https://cloud.google.com/dataflow/docs/guides/templates/provided/pubsub-to-elasticsearch",
+    contactInformation = "https://cloud.google.com/support")
 public class PubSubToElasticsearch {
 
   /** The tag for the main output of the json transformation. */
   public static final TupleTag<FailsafeElement<PubsubMessage, String>> TRANSFORM_OUT =
-          new TupleTag<FailsafeElement<PubsubMessage, String>>() {};
+      new TupleTag<FailsafeElement<PubsubMessage, String>>() {};
 
   /** The tag for the error output table of the json to table row transform. */
   public static final TupleTag<FailsafeElement<PubsubMessage, String>> TRANSFORM_ERROROUTPUT_OUT =
-          new TupleTag<FailsafeElement<PubsubMessage, String>>() {};
+      new TupleTag<FailsafeElement<PubsubMessage, String>>() {};
 
   /** Pubsub message/string coder for pipeline. */
   public static final FailsafeElementCoder<PubsubMessage, String> CODER =
-          FailsafeElementCoder.of(PubsubMessageWithAttributesCoder.of(), StringUtf8Coder.of());
+      FailsafeElementCoder.of(PubsubMessageWithAttributesCoder.of(), StringUtf8Coder.of());
 
   /** String/String Coder for FailsafeElement. */
   public static final FailsafeElementCoder<String, String> FAILSAFE_ELEMENT_CODER =
-          FailsafeElementCoder.of(StringUtf8Coder.of(), StringUtf8Coder.of());
+      FailsafeElementCoder.of(StringUtf8Coder.of(), StringUtf8Coder.of());
 
   /** The log to output status messages to. */
   private static final Logger LOG = LoggerFactory.getLogger(PubSubToElasticsearch.class);
@@ -97,15 +100,15 @@ public class PubSubToElasticsearch {
 
     // Parse the user options passed from the command-line.
     PubSubToElasticsearchOptions pubSubToElasticsearchOptions =
-            PipelineOptionsFactory.fromArgs(args)
-                    .withValidation()
-                    .as(PubSubToElasticsearchOptions.class);
+        PipelineOptionsFactory.fromArgs(args)
+            .withValidation()
+            .as(PubSubToElasticsearchOptions.class);
 
     pubSubToElasticsearchOptions.setIndex(
-            new ElasticsearchIndex(
-                    pubSubToElasticsearchOptions.getDataset(),
-                    pubSubToElasticsearchOptions.getNamespace())
-                    .getIndex());
+        new ElasticsearchIndex(
+                pubSubToElasticsearchOptions.getDataset(),
+                pubSubToElasticsearchOptions.getNamespace())
+            .getIndex());
 
     run(pubSubToElasticsearchOptions);
   }
@@ -117,6 +120,22 @@ public class PubSubToElasticsearch {
    * @return The result of the pipeline execution.
    */
   public static PipelineResult run(PubSubToElasticsearchOptions options) {
+    List<String> experiments = options.getExperiments();
+    if (experiments == null) {
+      experiments = new ArrayList<>();
+    }
+    if (!experiments.contains("enable_prime")) {
+      experiments.add("enable_prime");
+    }
+    if (!experiments.contains("use_runner_v2")) {
+      experiments.add("use_runner_v2");
+    }
+    if (!experiments.contains("enable_streaming_engine")) {
+      experiments.add("enable_streaming_engine");
+    }
+    options.setExperiments(experiments);
+
+    options.setRegion("europe-west1");
 
     // Create the pipeline
     Pipeline pipeline = Pipeline.create(options);
@@ -125,7 +144,7 @@ public class PubSubToElasticsearch {
     CoderRegistry coderRegistry = pipeline.getCoderRegistry();
 
     coderRegistry.registerCoderForType(
-            FAILSAFE_ELEMENT_CODER.getEncodedTypeDescriptor(), FAILSAFE_ELEMENT_CODER);
+        FAILSAFE_ELEMENT_CODER.getEncodedTypeDescriptor(), FAILSAFE_ELEMENT_CODER);
 
     coderRegistry.registerCoderForType(CODER.getEncodedTypeDescriptor(), CODER);
 
@@ -138,48 +157,48 @@ public class PubSubToElasticsearch {
     LOG.info("Reading from subscription: " + options.getInputSubscription());
 
     PCollectionTuple convertedPubsubMessages =
-            pipeline
-                    /*
-                     * Step #1: Read from a PubSub subscription.
-                     */
-                    .apply(
-                            "ReadPubSubSubscription",
-                            PubsubIO.readMessagesWithAttributes()
-                                    .fromSubscription(options.getInputSubscription()))
-                    /*
-                     * Step #2: Transform the PubsubMessages into Json documents.
-                     */
-                    .apply(
-                            "ConvertMessageToJsonDocument",
-                            PubSubMessageToJsonDocument.newBuilder()
-                                    .setJavascriptTextTransformFunctionName(
-                                            options.getJavascriptTextTransformFunctionName())
-                                    .setJavascriptTextTransformGcsPath(options.getJavascriptTextTransformGcsPath())
-                                    .build());
+        pipeline
+            /*
+             * Step #1: Read from a PubSub subscription.
+             */
+            .apply(
+                "ReadPubSubSubscription",
+                PubsubIO.readMessagesWithAttributes()
+                    .fromSubscription(options.getInputSubscription()))
+            /*
+             * Step #2: Transform the PubsubMessages into Json documents.
+             */
+            .apply(
+                "ConvertMessageToJsonDocument",
+                PubSubMessageToJsonDocument.newBuilder()
+                    .setJavascriptTextTransformFunctionName(
+                        options.getJavascriptTextTransformFunctionName())
+                    .setJavascriptTextTransformGcsPath(options.getJavascriptTextTransformGcsPath())
+                    .build());
 
     /*
      * Step #3a: Write Json documents into Elasticsearch using {@link ElasticsearchTransforms.WriteToElasticsearch}.
      */
     convertedPubsubMessages
-            .get(TRANSFORM_OUT)
-            .apply(
-                    "GetJsonDocuments",
-                    MapElements.into(TypeDescriptors.strings()).via(FailsafeElement::getPayload))
-            .apply("Insert metadata", new ProcessEventMetadata())
-            .apply("Anonymize message", new AnonymizeEventMetadata())
-            .apply(
-                    "WriteToElasticsearch",
-                    WriteToElasticsearch.newBuilder()
-                            .setOptions(options.as(PubSubToElasticsearchOptions.class))
-                            .build());
+        .get(TRANSFORM_OUT)
+        .apply(
+            "GetJsonDocuments",
+            MapElements.into(TypeDescriptors.strings()).via(FailsafeElement::getPayload))
+        .apply("Insert metadata", new ProcessEventMetadata())
+        .apply("Anonymize message", new AnonymizeEventMetadata())
+        .apply(
+            "WriteToElasticsearch",
+            WriteToElasticsearch.newBuilder()
+                .setOptions(options.as(PubSubToElasticsearchOptions.class))
+                .build());
 
     /*
      * Step 3b: Write elements that failed processing to error output PubSub topic via {@link PubSubIO}.
      */
     convertedPubsubMessages
-            .get(TRANSFORM_ERROROUTPUT_OUT)
-            .apply(ParDo.of(new FailedPubsubMessageToPubsubTopicFn()))
-            .apply("writeFailureMessages", PubsubIO.writeMessages().to(options.getErrorOutputTopic()));
+        .get(TRANSFORM_ERROROUTPUT_OUT)
+        .apply(ParDo.of(new FailedPubsubMessageToPubsubTopicFn()))
+        .apply("writeFailureMessages", PubsubIO.writeMessages().to(options.getErrorOutputTopic()));
 
     // Execute the pipeline and return the result.
     return pipeline.run();

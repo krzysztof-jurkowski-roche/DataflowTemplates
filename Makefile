@@ -15,7 +15,7 @@ push:
       -DskipTests \
       -DprojectId="$(PROJECT_ID)" \
       -DbucketName="$(BUCKET_NAME)" \
-      -DstagePrefix="images/$(shell date +%Y_%m_%d)_01" \
+      -DstagePrefix="images/pubsub/$(shell git rev-parse --short=8 HEAD)" \
       -DtemplateName="$(TEMPLATE_NAME)" \
       -pl v2/$(MODULE) -am
 
@@ -24,6 +24,7 @@ run:
       -DskipTests \
       -DprojectId="$(PROJECT_ID)" \
       -DbucketName="$(BUCKET_NAME)" \
+      -DstagePrefix="images/pubsub/$(shell git rev-parse --short=8 HEAD)" \
       -Dregion="$(REGION)" \
       -DjobName="$(JOB_NAME)" \
       -DtemplateName="$(TEMPLATE_NAME)" \
