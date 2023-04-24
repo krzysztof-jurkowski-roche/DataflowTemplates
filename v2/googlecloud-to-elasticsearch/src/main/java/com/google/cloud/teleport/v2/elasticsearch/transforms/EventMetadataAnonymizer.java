@@ -21,7 +21,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.cloud.dlp.v2.DlpServiceClient;
 import com.google.cloud.teleport.v2.elasticsearch.options.PubSubToElasticsearchOptions;
+import com.google.privacy.dlp.v2.DeidentifyContentRequest;
 import java.io.Serializable;
 
 /**
@@ -47,6 +49,10 @@ public class EventMetadataAnonymizer implements Serializable {
 
     public static EventMetadataAnonymizer build(
             String inputMessage, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
+        return new EventMetadataAnonymizer(inputMessage, pubSubToElasticsearchOptions);
+    }
+
+    public static EventMetadataAnonymizer build(String inputMessage, DlpServiceClient dlpServiceClient, DeidentifyContentRequest.Builder requestBuilder, PubSubToElasticsearchOptions pubSubToElasticsearchOptions) {
         return new EventMetadataAnonymizer(inputMessage, pubSubToElasticsearchOptions);
     }
 
